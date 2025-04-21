@@ -129,6 +129,3 @@ open up localhost:
    - ECR_REPO
    - PINECONE_API_KEY
    - GOOGLE_API_KEY
-
-    
-# Schemes_navigator
