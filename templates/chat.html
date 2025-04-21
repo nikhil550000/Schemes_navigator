@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheme Navigator</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid h-100">
+        <div class="row justify-content-center h-100">
+            <div class="col-md-8 col-lg-6 chat">
+                <div class="card animate__animated animate__fadeIn">
+                    <div class="card-header msg_head">
+                        <div class="d-flex bd-highlight">
+                            <div class="img_cont">
+                                <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img">
+                                <span class="online_icon pulse"></span>
+                            </div>
+                            <div class="user_info">
+                                <span>Scheme Navigator</span>
+                                <p>Ask me about government schemes!</p>
+                            </div>
+                            <div class="ml-auto">
+                                <button id="clearChatBtn" class="btn btn-sm clear-btn">
+                                    <i class="fas fa-trash"></i> Clear Chat
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="messageContainer" class="card-body msg_card_body">
+                        <!-- Messages will appear here -->
+                        <div class="d-flex justify-content-start mb-4 initial-message">
+                            <div class="img_cont_msg">
+                                <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img_msg">
+                            </div>
+                            <div class="msg_cotainer">
+                                Hello! I'm your Scheme Navigator assistant. How can I help you today?
+                                <span class="msg_time">Now</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <form id="messageForm" class="input-group">
+                            <input type="text" id="userInput" name="msg" placeholder="Ask about a government scheme..." autocomplete="off" class="form-control type_msg" required/>
+                            <div class="input-group-append">
+                                <button type="submit" id="sendBtn" class="input-group-text send_btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Show current time in initial message
+            const now = new Date();
+            const timeStr = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+            $(".initial-message .msg_time").text(timeStr);
+            
+            // Handle clear chat button
+            $("#clearChatBtn").click(function() {
+                $.ajax({
+                    type: "POST",
+                    url: "/clear",
+                }).done(function() {
+                    // Clear the message container except for the initial greeting
+                    $("#messageContainer").html("");
+                    
+                    // Add back the initial greeting
+                    const initialMsg = `
+                        <div class="d-flex justify-content-start mb-4 initial-message animate__animated animate__fadeIn">
+                            <div class="img_cont_msg">
+                                <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img_msg">
+                            </div>
+                            <div class="msg_cotainer">
+                                Hello! I'm your Scheme Navigator assistant. How can I help you today?
+                                <span class="msg_time">${timeStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    $("#messageContainer").append(initialMsg);
+                });
+            });
+            
+            $("#messageForm").on("submit", function(event) {
+                event.preventDefault();
+                
+                const date = new Date();
+                const hour = date.getHours();
+                const minute = date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes();
+                const timeStr = hour + ":" + minute;
+                
+                const userMessage = $("#userInput").val();
+                
+                if (!userMessage.trim()) return;
+                
+                // Add user message to chat
+                const userHtml = `
+                    <div class="d-flex justify-content-end mb-4 animate__animated animate__fadeInRight">
+                        <div class="msg_cotainer_send">
+                            ${userMessage}
+                            <span class="msg_time_send">${timeStr}</span>
+                        </div>
+                        <div class="img_cont_msg">
+                            <img src="https://i.imgur.com/zrFFAHT.png" class="rounded-circle user_img_msg">
+                        </div>
+                    </div>
+                `;
+                
+                $("#messageContainer").append(userHtml);
+                $("#userInput").val("");
+                
+                // Scroll to bottom
+                $("#messageContainer").scrollTop($("#messageContainer")[0].scrollHeight);
+                
+                // Add typing indicator
+                const typingHtml = `
+                    <div id="typing-indicator" class="d-flex justify-content-start mb-4 animate__animated animate__fadeIn">
+                        <div class="img_cont_msg">
+                            <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img_msg">
+                        </div>
+                        <div class="msg_cotainer typing">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                $("#messageContainer").append(typingHtml);
+                $("#messageContainer").scrollTop($("#messageContainer")[0].scrollHeight);
+                
+                // Make AJAX request to get response
+                $.ajax({
+                    data: {
+                        msg: userMessage,
+                    },
+                    type: "POST",
+                    url: "/get",
+                }).done(function(data) {
+                    // Remove typing indicator
+                    $("#typing-indicator").remove();
+                    
+                    // Add bot response
+                    const botHtml = `
+                        <div class="d-flex justify-content-start mb-4 animate__animated animate__fadeInLeft">
+                            <div class="img_cont_msg">
+                                <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img_msg">
+                            </div>
+                            <div class="msg_cotainer">
+                                ${data}
+                                <span class="msg_time">${timeStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $("#messageContainer").append($.parseHTML(botHtml));
+                    $("#messageContainer").scrollTop($("#messageContainer")[0].scrollHeight);
+                }).fail(function() {
+                    // Remove typing indicator
+                    $("#typing-indicator").remove();
+                    
+                    // Show error message
+                    const errorHtml = `
+                        <div class="d-flex justify-content-start mb-4 animate__animated animate__fadeInLeft">
+                            <div class="img_cont_msg">
+                                <img src="https://i.imgur.com/1baGtTt.png" class="rounded-circle user_img_msg">
+                            </div>
+                            <div class="msg_cotainer error">
+                                Sorry, I couldn't process your request. Please try again.
+                                <span class="msg_time">${timeStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $("#messageContainer").append($.parseHTML(errorHtml));
+                    $("#messageContainer").scrollTop($("#messageContainer")[0].scrollHeight);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
