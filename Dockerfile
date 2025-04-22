@@ -2,12 +2,21 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application
 COPY . .
 
-# Azure App Service expects the app to listen on PORT env variable
-ENV PORT=8080
+# Railway automatically sets PORT environment variable
+# Your app.py is already configured to use it:
+# port = int(os.environ.get("PORT", 5000))
 
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+# Command to run the application
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
