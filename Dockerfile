@@ -1,9 +1,13 @@
-FROM python:3.10-slim-buster
+FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY . /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install -r requirements.txt
+COPY . .
 
-CMD ["python3", "app.py"]
+# Azure App Service expects the app to listen on PORT env variable
+ENV PORT=8080
+
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
