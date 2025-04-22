@@ -1,4 +1,3 @@
-sentence-transformers
 langchain
 flask
 pypdf
@@ -11,4 +10,8 @@ langchain_experimental
 requests
 beautifulsoup4
 langchain_groq
+langchain_community
+langchain_huggingface
+langchain-tavily
+sentence-transformers
 -e .

@@ -12,7 +12,8 @@ from langchain.chains import ConversationalRetrievalChain
 from src.prompt import *
 import os
 import uuid
-import json
+# Add these imports for DuckDuckGo search
+from langchain_tavily import TavilySearch
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Secret key for sessions
@@ -21,9 +22,11 @@ load_dotenv()
 
 PINECONE_API_KEY=os.environ.get('PINECONE_API_KEY')
 GOOGLE_API_KEY = os.environ.get('google_api_key')
+TAVILY_API_KEY = os.environ.get('TAVILY_API_KEY')
 
 os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
 
 embeddings = download_hugging_face_embeddings()
 index_name = "schmemebot"
@@ -89,9 +92,66 @@ def chat():
     question_answer_chain = create_stuff_documents_chain(llm, custom_prompt)
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
     
-    # Process the user's message
+    # First try with vector database
     response = rag_chain.invoke({"input": msg})
     assistant_response = response["answer"]
+    
+    # Check if the response indicates lack of information
+    if ("I don't have information" in assistant_response or 
+        "I don't have specific information" in assistant_response or
+        "I'm not sure about" in assistant_response or
+        "I don't have enough information" in assistant_response):
+        try:
+            # Initialize TavilySearch search
+            search = TavilySearch(
+                        max_results=10,
+                        topic="general",
+                        # include_answer=False,
+                        # include_raw_content=False,
+                        # include_images=False,
+                        # include_image_descriptions=False,
+                        # search_depth="basic",
+                        # time_range="day",
+                        # include_domains=None,
+                        # exclude_domains=None
+            )
+            
+            # Search the internet
+            search_results = search.run(f"Indian government scheme {msg}")
+            
+            if search_results:
+                # Create a new prompt with search results
+                web_search_prompt = ChatPromptTemplate.from_messages([
+                    ("system", 
+                        f"""You are Scheme Navigator, a specialized assistant that provides information ONLY about CURRENTLY ACTIVE Indian government schemes.
+
+                        IMPORTANT INSTRUCTIONS:
+                        1. The user asked about: '{msg}'
+                        2. ONLY discuss schemes that are explicitly confirmed as CURRENTLY ACTIVE in the search results
+                        3. NEVER mention schemes unless you can verify they are currently active
+                        4. For each scheme mentioned, include the name of the sponsoring ministry/department and implementation date
+                        5. Clearly distinguish between central government and state government schemes
+                        6. Include specific eligibility criteria and benefits when available
+                        7. For each piece of information, cite the specific source (URL) it came from
+                        8. If you cannot find clear evidence a scheme is currently active, DO NOT mention it
+                        9. If no currently active schemes are found in the search results, clearly state "I cannot find any currently active schemes matching your query based on the search results."
+                        10. Do not make assumptions about schemes' status - only report what is explicitly stated in the search results
+
+                        Use ONLY the following search results to formulate your response:
+
+                        {search_results}"""),
+                    ("human", "{input}")
+                ])
+                
+                # Generate response with web search results
+                web_chain = web_search_prompt | llm
+                web_response = web_chain.invoke({"input": msg})
+                
+                # Replace the original response with the web search response
+                assistant_response = f"I couldn't find detailed information about this in my primary knowledge base, but I found some information online:\n\n{web_response.content}"
+        except Exception as e:
+            print(f"Web search failed: {e}")
+            # If the web search fails, keep the original response
     
     # Store conversation in history
     history.append({
@@ -107,5 +167,7 @@ def chat():
     
     return str(assistant_response)
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080, debug=True)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
