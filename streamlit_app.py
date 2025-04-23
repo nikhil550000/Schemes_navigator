@@ -112,13 +112,13 @@ if prompt := st.chat_input("Ask about any Indian government scheme..."):
                     search_results = search.run(f"Indian government scheme {prompt}")
                     
                     if search_results:
-                        # Create a new prompt with search results
+                        # Create a new prompt with search results - Fixed to use prompt variable directly, not as a template variable
                         web_search_prompt = ChatPromptTemplate.from_messages([
                             ("system", 
                                 f"""You are Scheme Navigator, a specialized assistant that provides information ONLY about CURRENTLY ACTIVE Indian government schemes.
 
                                 IMPORTANT INSTRUCTIONS:
-                                1. The user asked about: '{prompt}'
+                                1. The user asked about: {prompt}
                                 2. ONLY discuss schemes that are explicitly confirmed as CURRENTLY ACTIVE in the search results
                                 3. NEVER mention schemes unless you can verify they are currently active
                                 4. For each scheme mentioned, include the name of the sponsoring ministry/department and implementation date
@@ -131,7 +131,8 @@ if prompt := st.chat_input("Ask about any Indian government scheme..."):
 
                                 Use ONLY the following search results to formulate your response:
 
-                                {search_results}"""),
+                                {search_results}"""
+                            ),
                             ("human", "{input}")
                         ])
                         
