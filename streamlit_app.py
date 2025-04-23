@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain_pinecone import PineconeVectorStore
+from langchain_pinecone import Pinecone
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -30,7 +30,7 @@ def initialize_resources():
     embeddings = download_hugging_face_embeddings()
     index_name = "schmemebot"
     
-    docsearch = PineconeVectorStore.from_existing_index(
+    docsearch = Pinecone.from_existing_index(
         index_name=index_name,
         embedding=embeddings
     )
