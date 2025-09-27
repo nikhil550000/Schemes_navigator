@@ -4,7 +4,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from src.helper import download_hugging_face_embeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
@@ -37,7 +37,7 @@ def initialize_resources():
     
     retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 3})
     
-    llm = ChatGoogleGenerativeAI(model='gemini-1.5-pro', temperature=0.4)
+    llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash', temperature=0.4)
     
     return retriever, llm
 
