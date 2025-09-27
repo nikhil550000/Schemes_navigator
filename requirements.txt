@@ -12,6 +12,7 @@ beautifulsoup4
 langchain_groq
 langchain_community
 langchain_huggingface
+langchain_google_genai
 langchain-tavily
 sentence-transformers
 langchain-cli
