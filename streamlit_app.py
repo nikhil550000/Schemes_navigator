@@ -1,10 +1,10 @@
 import streamlit as st
-from langchain_pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from src.helper import download_hugging_face_embeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
@@ -30,14 +30,14 @@ def initialize_resources():
     embeddings = download_hugging_face_embeddings()
     index_name = "schmemebot"
     
-    docsearch = Pinecone.from_existing_index(
+    docsearch = PineconeVectorStore.from_existing_index(
         index_name=index_name,
         embedding=embeddings
     )
     
     retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 3})
     
-    llm = ChatGoogleGenerativeAI(model='gemini-1.5-pro', temperature=0.4)
+    llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash', temperature=0.4)
     
     return retriever, llm
 
@@ -112,13 +112,13 @@ if prompt := st.chat_input("Ask about any Indian government scheme..."):
                     search_results = search.run(f"Indian government scheme {prompt}")
                     
                     if search_results:
-                        # Create a new prompt with search results - Fixed to use prompt variable directly, not as a template variable
+                        # Create a new prompt with search results
                         web_search_prompt = ChatPromptTemplate.from_messages([
                             ("system", 
                                 f"""You are Scheme Navigator, a specialized assistant that provides information ONLY about CURRENTLY ACTIVE Indian government schemes.
 
                                 IMPORTANT INSTRUCTIONS:
-                                1. The user asked about: {prompt}
+                                1. The user asked about: '{prompt}'
                                 2. ONLY discuss schemes that are explicitly confirmed as CURRENTLY ACTIVE in the search results
                                 3. NEVER mention schemes unless you can verify they are currently active
                                 4. For each scheme mentioned, include the name of the sponsoring ministry/department and implementation date
@@ -131,8 +131,7 @@ if prompt := st.chat_input("Ask about any Indian government scheme..."):
 
                                 Use ONLY the following search results to formulate your response:
 
-                                {search_results}"""
-                            ),
+                                {search_results}"""),
                             ("human", "{input}")
                         ])
                         
